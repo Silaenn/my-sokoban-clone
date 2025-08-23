@@ -245,7 +245,7 @@ MonoBehaviour:
   playerPrefab: {fileID: 5774313370279931384, guid: 02c35b9405b3d5f408ab18911a598db5, type: 3}
   boxPrefab: {fileID: 2457828383767380174, guid: f82aa72455a4a1c40b4347bf7d328d2c, type: 3}
   targetPrefab: {fileID: 407714879617767888, guid: a31bb16689a748b45877eab6ebb3b409, type: 3}
-  emptytPrefab: {fileID: 4484045180690170601, guid: 9a0ab4dbbd61c334299335356a7628b0, type: 3}
+  emptyTilePrefab: {fileID: 4484045180690170601, guid: 9a0ab4dbbd61c334299335356a7628b0, type: 3}
   tileSize: 1
 --- !u!4 &914175271
 Transform:

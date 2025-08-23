@@ -35,6 +35,7 @@ public class GameManager : MonoBehaviour
     private void HandleLevelComplete()
     {
         Debug.Log("Level Completed!");
+        gridManager.ClearGrid();
         // Tambahkan logika untuk load level berikutnya atau menampilkan UI kemenangan
     }
 
