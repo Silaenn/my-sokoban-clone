@@ -2,11 +2,35 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] private SokobanLevel currentLevel;
+    [SerializeField] private SokobanLevel[] levels;
     private GridManager gridManager;
     private PlayerController playerController;
+    private int currentLevelIndex = 0;
 
     private void Awake()
+    {
+        InitializeComponents();
+        SubscribeToEvents();
+    }
+
+    private void Start()
+    {
+        if (levels.Length > 0 && levels[currentLevelIndex] != null)
+        {
+            gridManager.InitializeLevel(levels[currentLevelIndex]);
+        }
+        else
+        {
+            Debug.LogError("No levels assigned or current level is null");
+        }
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromEvents();
+    }
+
+    private void InitializeComponents()
     {
         gridManager = FindObjectOfType<GridManager>();
         playerController = FindObjectOfType<PlayerController>();
@@ -14,33 +38,47 @@ public class GameManager : MonoBehaviour
         if (gridManager == null || playerController == null)
         {
             Debug.LogError("Required components missing in scene");
-            return;
         }
-
-        playerController.OnLevelComplete += HandleLevelComplete;
     }
 
-    private void Start()
+    private void SubscribeToEvents()
     {
-        if (currentLevel != null)
+        if (gridManager != null)
         {
-            gridManager.InitializeLevel(currentLevel);
+            gridManager.OnWinConditionMet += HandleLevelComplete;
         }
-        else
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        if (gridManager != null)
         {
-            Debug.LogError("No level assigned to GameManager");
+            gridManager.OnWinConditionMet -= HandleLevelComplete;
         }
     }
 
     private void HandleLevelComplete()
     {
         Debug.Log("Level Completed!");
-        gridManager.ClearGrid();
-        // Tambahkan logika untuk load level berikutnya atau menampilkan UI kemenangan
+        currentLevelIndex++;
+        if (currentLevelIndex < levels.Length)
+        {
+            gridManager.ClearGridObjectsAndTiles();
+            gridManager.InitializeLevel(levels[currentLevelIndex]);
+        }
+        else
+        {
+            Debug.Log("All levels completed!");
+            // Tambahkan logika untuk menampilkan akhir game jika diinginkan
+        }
     }
 
-    private void OnDestroy()
+    public void RestartCurrentLevel()
     {
-        playerController.OnLevelComplete -= HandleLevelComplete;
+        if (currentLevelIndex >= 0 && currentLevelIndex < levels.Length)
+        {
+            gridManager.ClearGridObjectsAndTiles();
+            gridManager.InitializeLevel(levels[currentLevelIndex]);
+        }
     }
 }
