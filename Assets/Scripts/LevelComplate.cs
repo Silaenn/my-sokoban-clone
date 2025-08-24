@@ -15,65 +15,61 @@ public class LevelComplate : MonoBehaviour
     private GridManager gridManager;
     private GameManager gameManager;
 
-    void Awake()
+    private void Awake()
     {
-        gridManager = FindObjectOfType<GridManager>();
-        if (gridManager == null)
-        {
-            Debug.LogError("GridManager not found in scene");
-            return;
-        }
-
-        gameManager = FindObjectOfType<GameManager>();
         if (gameManager == null)
         {
-            Debug.LogError("GameManager not found in scene");
-            return;
+            gameManager = FindObjectOfType<GameManager>();
+            if (gameManager == null)
+            {
+                Debug.LogError("GameManager not found in scene. Please assign it in the Inspector.");
+                enabled = false;
+                return;
+            }
         }
 
         instruction.SetActive(true);
-        levelComplate.SetActive(false); // Awalnya nonaktif sampai level selesai
-        mainMenu.onClick.AddListener(() =>
-        {
-            SceneManager.LoadScene("MainMenu");
-        });
+        levelComplate.SetActive(false);
+        mainMenu.onClick.AddListener(() => SceneManager.LoadScene("MainMenu"));
 
         UpdateLevelText();
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        if (gridManager != null)
+        if (gameManager != null)
         {
-            gridManager.OnWinConditionMet += OnLevelComplete;
+            gameManager.OnLevelCompleted += UpdateLevelText;
+            gameManager.OnAllLevelsCompleted += ShowLevelCompleteUI;
         }
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
-        if (gridManager != null)
+        if (gameManager != null)
         {
-            gridManager.OnWinConditionMet -= OnLevelComplete;
+            gameManager.OnLevelCompleted -= UpdateLevelText;
+            gameManager.OnAllLevelsCompleted -= ShowLevelCompleteUI;
         }
     }
 
-    private void OnLevelComplete()
+    private void ShowLevelCompleteUI()
     {
-        if (gridManager != null && gameManager.currentLevelIndex >= gameManager.levels.Length)
-        {
-            gridManager.ClearGridObjectsAndTiles();
-            instruction.SetActive(false);
-            levelComplate.SetActive(true); // Tampilkan hanya saat semua level selesai
-        }   
-        UpdateLevelText();
+        instruction.SetActive(false);
+        levelComplate.SetActive(true);
+        
     }
 
     private void UpdateLevelText()
     {
-        if (levelText != null && gridManager != null)
+        if (levelText == null || gameManager == null || gameManager.Levels == null)
         {
-            int currentLevel = gameManager.currentLevelIndex + 1; // +1 karena index mulai dari 0
-            levelText.text = $"Level: {currentLevel}/{gameManager.levels.Length}";
+            Debug.LogWarning("Cannot update level text: Missing levelText, gameManager, or levels.");
+            return;
         }
+
+        int currentLevel = gameManager.CurrentLevelIndex + 1;
+        levelText.text = $"Level: {currentLevel}/{gameManager.Levels.Length}";
     }
 }
+

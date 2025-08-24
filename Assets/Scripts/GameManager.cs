@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -5,7 +6,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] public SokobanLevel[] levels; // Public agar bisa diakses dari LevelComplate
     private GridManager gridManager;
     private PlayerController playerController;
-    public int currentLevelIndex = 0; // Public agar bisa diakses
+    private int currentLevelIndex = 0;
+
+    public SokobanLevel[] Levels => levels;
+    public int CurrentLevelIndex => currentLevelIndex;
+
+    public event Action OnLevelCompleted; // Event untuk memberi tahu level selesai
+    public event Action OnAllLevelsCompleted; // Event untuk semua level selesai
 
     private void Awake()
     {
@@ -13,16 +20,15 @@ public class GameManager : MonoBehaviour
         SubscribeToEvents();
     }
 
+
     private void Start()
     {
-        if (levels.Length > 0 && levels[currentLevelIndex] != null)
-        {
-            gridManager.InitializeLevel(levels[currentLevelIndex]);
-        }
-        else
+        if (levels == null || levels.Length == 0 || levels[currentLevelIndex] == null)
         {
             Debug.LogError("No levels assigned or current level is null");
+            return;
         }
+        gridManager.InitializeLevel(levels[currentLevelIndex]);
     }
 
     private void OnDestroy()
@@ -32,14 +38,29 @@ public class GameManager : MonoBehaviour
 
     private void InitializeComponents()
     {
-        gridManager = FindObjectOfType<GridManager>();
-        playerController = FindObjectOfType<PlayerController>();
-
-        if (gridManager == null || playerController == null)
+        if (gridManager == null)
         {
-            Debug.LogError("Required components missing in scene");
+            gridManager = FindObjectOfType<GridManager>();
+            if (gridManager == null)
+            {
+                Debug.LogError("GridManager not found in scene. Please assign it in the Inspector.");
+                enabled = false; // Nonaktifkan skrip jika komponen tidak ditemukan
+                return;
+            }
+        }
+
+        if (playerController == null)
+        {
+            playerController = FindObjectOfType<PlayerController>();
+            if (playerController == null)
+            {
+                Debug.LogError("PlayerController not found in scene. Please assign it in the Inspector.");
+                enabled = false;
+                return;
+            }
         }
     }
+
 
     private void SubscribeToEvents()
     {
@@ -49,6 +70,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
     private void UnsubscribeFromEvents()
     {
         if (gridManager != null)
@@ -57,28 +79,40 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
     private void HandleLevelComplete()
     {
         Debug.Log("Level Completed!");
+        OnLevelCompleted?.Invoke(); // Beri tahu bahwa level selesai
         currentLevelIndex++;
         if (currentLevelIndex < levels.Length)
         {
-            gridManager.ClearGridObjectsAndTiles();
             gridManager.InitializeLevel(levels[currentLevelIndex]);
         }
         else
         {
             Debug.Log("All levels completed!");
-            // Panggil UI LevelComplate jika semua level selesai akan ditangani di LevelComplate
+            OnAllLevelsCompleted?.Invoke(); // Beri tahu bahwa semua level selesai
+            gridManager.ClearLevel();
         }
     }
 
+
     public void RestartCurrentLevel()
     {
-        if (currentLevelIndex >= 0 && currentLevelIndex < levels.Length)
+        if (gridManager == null)
         {
-            gridManager.ClearGridObjectsAndTiles();
+            Debug.LogError("Cannot restart level: GridManager is null.");
+            return;
+        }
+
+        if (currentLevelIndex >= 0 && currentLevelIndex < levels.Length && levels[currentLevelIndex] != null)
+        {
             gridManager.InitializeLevel(levels[currentLevelIndex]);
+        }
+        else
+        {
+            Debug.LogError("Cannot restart level: Invalid level index or level data.");
         }
     }
 }
