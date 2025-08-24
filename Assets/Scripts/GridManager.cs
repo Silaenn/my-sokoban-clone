@@ -40,6 +40,8 @@ public class GridManager : MonoBehaviour
             return;
         }
 
+        moveHistory.Clear();
+
         ClearGridObjectsAndTiles();
         InitializeGrid(level);
         CreateBackgroundTiles(level);
@@ -87,6 +89,13 @@ public class GridManager : MonoBehaviour
         Vector2Int prevPlayerPos = lastState.playerPos;
         Vector2Int[] prevBoxPos = lastState.boxPos;
 
+        if (prevGridState.GetLength(0) != grid.GetLength(0) || prevGridState.GetLength(1) != grid.GetLength(1))
+        {
+            Debug.LogWarning("Invalid grid state in move history. Skipping undo.");
+            return;
+        }
+
+
         // Clear existing objects and tiles
         ClearGridObjectsAndTiles();
 
@@ -109,6 +118,7 @@ public class GridManager : MonoBehaviour
 
     public void RestartLevel(SokobanLevel level)
     {
+        moveHistory.Clear();
         ClearGridObjectsAndTiles();
         InitializeLevel(level);
     }
