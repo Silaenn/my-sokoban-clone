@@ -28,10 +28,10 @@ public class PlayerController : MonoBehaviour
 
     private Vector2Int GetInputDirection()
     {
-        if (Input.GetKeyDown(KeyCode.UpArrow)) return new Vector2Int(0, 1);
-        if (Input.GetKeyDown(KeyCode.DownArrow)) return new Vector2Int(0, -1);
-        if (Input.GetKeyDown(KeyCode.LeftArrow)) return new Vector2Int(-1, 0);
-        if (Input.GetKeyDown(KeyCode.RightArrow)) return new Vector2Int(1, 0);
+        if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) return new Vector2Int(0, 1);
+        if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) return new Vector2Int(0, -1);
+        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) return new Vector2Int(-1, 0);
+        if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) return new Vector2Int(1, 0);
         return Vector2Int.zero;
     }
 

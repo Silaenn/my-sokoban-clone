@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+
 public class GridManager : MonoBehaviour
 {
     [SerializeField] private GameObject wallPrefab;
@@ -29,6 +30,7 @@ public class GridManager : MonoBehaviour
 
     private const float OffsetScale = 2.5f;
     private const float BackgroundZOffset = 0.1f;
+    private const float TargetZOffset = 0.05f; // Z untuk target agar di belakang player/box
 
     public void InitializeLevel(SokobanLevel level)
     {
@@ -59,7 +61,7 @@ public class GridManager : MonoBehaviour
         GameObject movingObject = gridObjects[oldPos.x, oldPos.y];
         if (movingObject == null) return;
 
-        SaveMoveState(oldPos, newPos);
+        SaveMoveState();
         UpdateGridState(oldPos, newPos, type);
         AnimateMovement(movingObject, newPos);
 
@@ -67,13 +69,13 @@ public class GridManager : MonoBehaviour
         {
             UpdatePlayerPosition(newPos);
             OnPlayerMoved?.Invoke();
-            StartCoroutine(CheckWinAfterDelay(0.2f));
+            StartCoroutine(CheckWinAfterDelay(1.5f));
         }
     }
 
-    public void UpdatePlayerPosition(Vector2Int newPos)
+    public void UpdatePlayerPosition(Vector2Int newPosition)
     {
-        playerPosition = newPos;
+        playerPosition = newPosition;
     }
 
     public void UndoMove()
@@ -162,11 +164,21 @@ public class GridManager : MonoBehaviour
                 TileType type = GetTileType(level.gridData[flippedY][x]);
 
                 grid[x, y] = type;
+
                 if (type == TileType.Target)
                 {
                     targetPositions.Add(new Vector2Int(x, y));
                 }
-                if (type != TileType.Empty)
+
+                // Instantiate target always if it's a target position
+                if (targetPositions.Contains(new Vector2Int(x, y)))
+                {
+                    Vector3 targetPos = new Vector3(x * tileSize + offset.x, y * tileSize + offset.y, TargetZOffset);
+                    Instantiate(targetPrefab, targetPos, Quaternion.identity, transform);
+                }
+
+                // Then instantiate movable or wall
+                if (type != TileType.Empty && type != TileType.Target)
                 {
                     gridObjects[x, y] = Instantiate(GetPrefabForType(type), position, Quaternion.identity, transform);
                 }
@@ -181,6 +193,12 @@ public class GridManager : MonoBehaviour
 
     private void UpdateGridState(Vector2Int oldPos, Vector2Int newPos, TileType type)
     {
+        // If newPos has an object (e.g., box if pushing), destroy it if necessary (but for target, it's statis, so no destroy)
+        if (gridObjects[newPos.x, newPos.y] != null && type == TileType.Box) // Only for pushing box
+        {
+            Destroy(gridObjects[newPos.x, newPos.y]);
+        }
+
         bool oldPosWasTarget = targetPositions.Contains(oldPos);
         grid[oldPos.x, oldPos.y] = oldPosWasTarget ? TileType.Target : TileType.Empty;
         grid[newPos.x, newPos.y] = type;
@@ -305,37 +323,31 @@ public class GridManager : MonoBehaviour
     private void SaveInitialState()
     {
         TileType[,] initialGrid = (TileType[,])grid.Clone();
-        Vector2Int[] initialBoxPos = new Vector2Int[targetPositions.Count];
-        int index = 0;
-        for (int x = 0; x < grid.GetLength(0); x++)
-        {
-            for (int y = 0; y < grid.GetLength(1); y++)
-            {
-                if (grid[x, y] == TileType.Box)
-                {
-                    initialBoxPos[index++] = new Vector2Int(x, y);
-                }
-            }
-        }
+        Vector2Int[] initialBoxPos = GetBoxPositions();
         moveHistory.Push((initialGrid, playerPosition, initialBoxPos));
     }
 
-    private void SaveMoveState(Vector2Int oldPos, Vector2Int newPos)
+    private void SaveMoveState()
     {
         TileType[,] currentGrid = (TileType[,])grid.Clone();
-        Vector2Int[] boxPos = new Vector2Int[targetPositions.Count];
-        int index = 0;
+        Vector2Int[] boxPos = GetBoxPositions();
+        moveHistory.Push((currentGrid, playerPosition, boxPos));
+    }
+
+    private Vector2Int[] GetBoxPositions()
+    {
+        List<Vector2Int> positions = new List<Vector2Int>();
         for (int x = 0; x < grid.GetLength(0); x++)
         {
             for (int y = 0; y < grid.GetLength(1); y++)
             {
                 if (grid[x, y] == TileType.Box)
                 {
-                    boxPos[index++] = new Vector2Int(x, y);
+                    positions.Add(new Vector2Int(x, y));
                 }
             }
         }
-        moveHistory.Push((currentGrid, oldPos, boxPos));
+        return positions.ToArray();
     }
 
     private void RebuildGridObjects(Vector2Int playerPos, Vector2Int[] boxPos)
@@ -345,25 +357,35 @@ public class GridManager : MonoBehaviour
         {
             for (int x = 0; x < grid.GetLength(0); x++)
             {
-                Vector3 position = new Vector3(x * tileSize + offset.x, y * tileSize + offset.y, 0);
-                if (new Vector2Int(x, y) == playerPos)
+                Vector2Int pos = new Vector2Int(x, y);
+                Vector3 basePos = new Vector3(x * tileSize + offset.x, y * tileSize + offset.y, 0);
+
+                // Always instantiate target if it's a target position
+                if (targetPositions.Contains(pos))
+                {
+                    Vector3 targetPos = new Vector3(basePos.x, basePos.y, TargetZOffset);
+                    Instantiate(targetPrefab, targetPos, Quaternion.identity, transform);
+                    // Do not set grid to Target if there's something on it; keep the state
+                }
+
+                // Instantiate wall if wall
+                if (grid[x, y] == TileType.Wall)
+                {
+                    gridObjects[x, y] = Instantiate(wallPrefab, basePos, Quaternion.identity, transform);
+                }
+
+                // Instantiate box if box
+                if (Array.Exists(boxPos, bPos => bPos == pos))
+                {
+                    grid[x, y] = TileType.Box; // Restore if needed
+                    gridObjects[x, y] = Instantiate(boxPrefab, basePos, Quaternion.identity, transform);
+                }
+
+                // Instantiate player if player
+                if (pos == playerPos)
                 {
                     grid[x, y] = TileType.Player;
-                    gridObjects[x, y] = Instantiate(playerPrefab, position, Quaternion.identity, transform);
-                }
-                else if (Array.Exists(boxPos, pos => pos.x == x && pos.y == y))
-                {
-                    grid[x, y] = TileType.Box;
-                    gridObjects[x, y] = Instantiate(boxPrefab, position, Quaternion.identity, transform);
-                }
-                else if (targetPositions.Contains(new Vector2Int(x, y)))
-                {
-                    grid[x, y] = TileType.Target;
-                    gridObjects[x, y] = Instantiate(targetPrefab, position, Quaternion.identity, transform);
-                }
-                else if (grid[x, y] == TileType.Wall)
-                {
-                    gridObjects[x, y] = Instantiate(wallPrefab, position, Quaternion.identity, transform);
+                    gridObjects[x, y] = Instantiate(playerPrefab, basePos, Quaternion.identity, transform);
                 }
             }
         }

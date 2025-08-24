@@ -2,10 +2,10 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] private SokobanLevel[] levels;
+    [SerializeField] public SokobanLevel[] levels; // Public agar bisa diakses dari LevelComplate
     private GridManager gridManager;
     private PlayerController playerController;
-    private int currentLevelIndex = 0;
+    public int currentLevelIndex = 0; // Public agar bisa diakses
 
     private void Awake()
     {
@@ -69,7 +69,7 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.Log("All levels completed!");
-            // Tambahkan logika untuk menampilkan akhir game jika diinginkan
+            // Panggil UI LevelComplate jika semua level selesai akan ditangani di LevelComplate
         }
     }
 
