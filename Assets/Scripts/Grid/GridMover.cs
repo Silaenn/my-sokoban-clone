@@ -6,27 +6,24 @@ using UnityEngine;
 public class GridMover
 {
     private readonly GridManager gridManager;
-    private readonly MoveHistoryManager moveHistoryManager;
     private readonly float tileSize;
 
     public GridMover(GridManager gridManager, float tileSize)
     {
         this.gridManager = gridManager;
-        this.moveHistoryManager = new MoveHistoryManager(gridManager, new GridInitializer(gridManager, gridManager.WallPrefab, gridManager.PlayerPrefab, gridManager.BoxPrefab, gridManager.TargetPrefab, gridManager.EmptyTilePrefab, tileSize));
         this.tileSize = tileSize;
     }
 
     public void UpdateGrid(Vector2Int oldPos, Vector2Int newPos, TileType type, TileType[,] grid,
         GameObject[,] gridObjects, List<Vector2Int> targetPositions, ref Vector2Int playerPosition,
-        Action onPlayerMoved, WinConditionChecker winConditionChecker)
+        Action onPlayerMoved, WinConditionChecker winConditionChecker, MoveHistoryManager moveHistoryManager)
     {
         if (!GridUtils.IsValidPosition(newPos, grid) || !IsValidMove(newPos, grid)) return;
 
         GameObject movingObject = gridObjects[oldPos.x, oldPos.y];
         if (movingObject == null) return;
 
-        // Simpan state sebelum pergerakan
-        moveHistoryManager.SaveMoveState(grid, playerPosition);
+        // Simpan state sebelum pergerakan (state saat ini sebelum move)
 
         UpdateGridState(oldPos, newPos, type, grid, gridObjects, targetPositions);
         AnimateMovement(movingObject, newPos);
@@ -35,6 +32,7 @@ public class GridMover
         {
             playerPosition = newPos;
             onPlayerMoved?.Invoke();
+            moveHistoryManager.SaveMoveState(grid, playerPosition);
             gridManager.StartCoroutine(winConditionChecker.CheckWinAfterDelay(1.5f));
         }
     }
@@ -84,6 +82,3 @@ public class GridMover
         if (obj != null) obj.position = targetPos;
     }
 }
-
-
-

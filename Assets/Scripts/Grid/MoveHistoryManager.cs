@@ -16,8 +16,8 @@ public class MoveHistoryManager
 
     public void SaveInitialState(TileType[,] grid, Vector2Int playerPosition)
     {
-        TileType[,] initialGrid = (TileType[,])grid.Clone();
         Vector2Int[] initialBoxPos = GetBoxPositions(grid);
+        TileType[,] initialGrid = (TileType[,])grid.Clone();
         moveHistory.Push((initialGrid, playerPosition, initialBoxPos));
     }
 
@@ -37,12 +37,13 @@ public class MoveHistoryManager
             return;
         }
 
-        // Pop state terakhir (langkah sebelumnya)
+        // Pop state saat ini dan ambil state sebelumnya
         moveHistory.Pop(); // Buang state saat ini
-        var lastState = moveHistory.Peek(); // Ambil state sebelumnya
-        TileType[,] prevGridState = lastState.gridState;
-        Vector2Int prevPlayerPos = lastState.playerPos;
-        Vector2Int[] prevBoxPos = lastState.boxPos;
+        var previousState = moveHistory.Peek(); // Ambil state sebelumnya tanpa menghapusnya
+        
+        TileType[,] prevGridState = previousState.gridState;
+        Vector2Int prevPlayerPos = previousState.playerPos;
+        Vector2Int[] prevBoxPos = previousState.boxPos;
 
         if (prevGridState.GetLength(0) != grid.GetLength(0) || prevGridState.GetLength(1) != grid.GetLength(1))
         {
@@ -50,22 +51,12 @@ public class MoveHistoryManager
             return;
         }
 
-        // Bersihkan grid dan objek saat ini
-        gridInitializer.ClearGridObjectsAndTiles();
+        // Update grid state
         grid = (TileType[,])prevGridState.Clone();
         playerPosition = prevPlayerPos;
 
-        // Buat ulang background tiles
-        gridInitializer.CreateBackgroundTiles(new SokobanLevel
-        {
-            width = grid.GetLength(0),
-            height = grid.GetLength(1),
-            gridData = GridUtils.ConvertGridToStringArray(grid),
-            playerStartPosition = prevPlayerPos
-        }, backgroundTiles);
-
-        // Bangun ulang objek grid
-        RebuildGridObjects(prevPlayerPos, prevBoxPos, grid, gridObjects, targetPositions);
+        // Optimized: Hanya update posisi objects yang berubah, tidak recreate semua
+        UpdateObjectPositions(prevPlayerPos, prevBoxPos, gridObjects, targetPositions);
     }
 
     public void ClearHistory()
@@ -89,40 +80,55 @@ public class MoveHistoryManager
         return positions.ToArray();
     }
 
-    private void RebuildGridObjects(Vector2Int playerPos, Vector2Int[] boxPos, TileType[,] grid,
-        GameObject[,] gridObjects, List<Vector2Int> targetPositions)
+    private void UpdateObjectPositions(Vector2Int playerPos, Vector2Int[] boxPos, GameObject[,] gridObjects, List<Vector2Int> targetPositions)
     {
-        Vector2 offset = GridUtils.CalculateOffset(grid.GetLength(0), grid.GetLength(1), gridManager.TileSize);
-        for (int y = 0; y < grid.GetLength(1); y++)
+        Vector2 offset = GridUtils.CalculateOffset(gridObjects.GetLength(0), gridObjects.GetLength(1), gridManager.TileSize);
+
+        // Clear current movable objects (player and boxes)
+        for (int x = 0; x < gridObjects.GetLength(0); x++)
         {
-            for (int x = 0; x < grid.GetLength(0); x++)
+            for (int y = 0; y < gridObjects.GetLength(1); y++)
             {
-                Vector2Int pos = new Vector2Int(x, y);
-                Vector3 basePos = new Vector3(x * gridManager.TileSize + offset.x, y * gridManager.TileSize + offset.y, 0);
-
-                if (targetPositions.Contains(pos))
+                GameObject obj = gridObjects[x, y];
+                if (obj != null)
                 {
-                    Vector3 targetPos = new Vector3(basePos.x, basePos.y, GridInitializer.TargetZOffset);
-                    UnityEngine.Object.Instantiate(gridManager.TargetPrefab, targetPos, Quaternion.identity, gridManager.transform);
-                }
-
-                if (grid[x, y] == TileType.Wall)
-                {
-                    gridObjects[x, y] = UnityEngine.Object.Instantiate(gridManager.WallPrefab, basePos, Quaternion.identity, gridManager.transform);
-                }
-
-                if (Array.Exists(boxPos, bPos => bPos == pos))
-                {
-                    grid[x, y] = TileType.Box;
-                    gridObjects[x, y] = UnityEngine.Object.Instantiate(gridManager.BoxPrefab, basePos, Quaternion.identity, gridManager.transform);
-                }
-
-                if (pos == playerPos)
-                {
-                    grid[x, y] = TileType.Player;
-                    gridObjects[x, y] = UnityEngine.Object.Instantiate(gridManager.PlayerPrefab, basePos, Quaternion.identity, gridManager.transform);
+                    // Check if it's a player or box object (not wall)
+                    if (obj.name.Contains("Player") || obj.name.Contains("Box"))
+                    {
+                        UnityEngine.Object.Destroy(obj);
+                        gridObjects[x, y] = null;
+                    }
                 }
             }
+        }
+
+        // Place player at previous position
+        Vector3 playerWorldPos = new Vector3(
+            playerPos.x * gridManager.TileSize + offset.x,
+            playerPos.y * gridManager.TileSize + offset.y,
+            0
+        );
+        gridObjects[playerPos.x, playerPos.y] = UnityEngine.Object.Instantiate(
+            gridManager.PlayerPrefab,
+            playerWorldPos,
+            Quaternion.identity,
+            gridManager.transform
+        );
+
+        // Place boxes at previous positions
+        foreach (Vector2Int box in boxPos)
+        {
+            Vector3 boxWorldPos = new Vector3(
+                box.x * gridManager.TileSize + offset.x,
+                box.y * gridManager.TileSize + offset.y,
+                0
+            );
+            gridObjects[box.x, box.y] = UnityEngine.Object.Instantiate(
+                gridManager.BoxPrefab,
+                boxWorldPos,
+                Quaternion.identity,
+                gridManager.transform
+            );
         }
     }
 }

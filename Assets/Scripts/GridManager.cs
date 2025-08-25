@@ -68,7 +68,8 @@ public class GridManager : MonoBehaviour
 
     public void UpdateGrid(Vector2Int oldPos, Vector2Int newPos, TileType type)
     {
-        gridMover.UpdateGrid(oldPos, newPos, type, grid, gridObjects, targetPositions, ref playerPosition, OnPlayerMoved, winConditionChecker);
+        // Pass moveHistoryManager instance yang sama ke GridMover
+        gridMover.UpdateGrid(oldPos, newPos, type, grid, gridObjects, targetPositions, ref playerPosition, OnPlayerMoved, winConditionChecker, moveHistoryManager);
     }
 
     public void UpdatePlayerPosition(Vector2Int newPosition)
@@ -104,8 +105,4 @@ public class GridManager : MonoBehaviour
     {
         gridInitializer.ClearGridObjectsAndTiles();
     }
-
 }
-
-
-
