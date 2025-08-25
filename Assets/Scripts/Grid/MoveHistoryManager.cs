@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class MoveHistoryManager
 {
-    private readonly GridManager gridManager;
-    private readonly GridInitializer gridInitializer;
-    private readonly Stack<(TileType[,] gridState, Vector2Int playerPos, Vector2Int[] boxPos)> moveHistory = new();
+    readonly GridManager gridManager;
+    readonly GridInitializer gridInitializer;
+    readonly Stack<(TileType[,] gridState, Vector2Int playerPos, Vector2Int[] boxPos)> moveHistory = new();
 
     public MoveHistoryManager(GridManager gridManager, GridInitializer gridInitializer)
     {
@@ -64,7 +64,7 @@ public class MoveHistoryManager
         moveHistory.Clear();
     }
 
-    private Vector2Int[] GetBoxPositions(TileType[,] grid)
+    Vector2Int[] GetBoxPositions(TileType[,] grid)
     {
         List<Vector2Int> positions = new List<Vector2Int>();
         for (int x = 0; x < grid.GetLength(0); x++)
@@ -80,7 +80,7 @@ public class MoveHistoryManager
         return positions.ToArray();
     }
 
-    private void UpdateObjectPositions(Vector2Int playerPos, Vector2Int[] boxPos, GameObject[,] gridObjects, List<Vector2Int> targetPositions)
+    void UpdateObjectPositions(Vector2Int playerPos, Vector2Int[] boxPos, GameObject[,] gridObjects, List<Vector2Int> targetPositions)
     {
         Vector2 offset = GridUtils.CalculateOffset(gridObjects.GetLength(0), gridObjects.GetLength(1), gridManager.TileSize);
 

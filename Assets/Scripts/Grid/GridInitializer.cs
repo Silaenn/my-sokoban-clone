@@ -86,6 +86,7 @@ public class GridInitializer
             for (int x = 0; x < level.width; x++)
             {
                 Vector3 position = new Vector3(x * tileSize + offset.x, y * tileSize + offset.y, 0);
+
                 TileType type = GridUtils.GetTileType(level.gridData[flippedY][x]);
 
                 grid[x, y] = type;
@@ -98,6 +99,7 @@ public class GridInitializer
                 if (targetPositions.Contains(new Vector2Int(x, y)))
                 {
                     Vector3 targetPos = new Vector3(x * tileSize + offset.x, y * tileSize + offset.y, TargetZOffset);
+
                     UnityEngine.Object.Instantiate(targetPrefab, targetPos, Quaternion.identity, gridManager.transform);
                 }
 
@@ -106,6 +108,7 @@ public class GridInitializer
                     gridObjects[x, y] = UnityEngine.Object.Instantiate(GridUtils.GetPrefabForType(type, wallPrefab, playerPrefab, boxPrefab, targetPrefab, emptyTilePrefab),
                         position, Quaternion.identity, gridManager.transform);
                 }
+                
             }
         }
     }
